@@ -151,7 +151,7 @@ let regular_file =
 let () =
   let store_path_param =
     Command.Param.(
-      flag "-store"
+      flag "store"
         (optional_with_default (Filename.concat home_dir ".dotfiles") directory)
         ~doc:"directory dotfile store to use")
   and file_param = Command.Param.(anon ("file" %: file))
@@ -182,7 +182,7 @@ let () =
         fun () -> unmanage_dotfile store_path path |> exit_with_res)
   in
   Command.run
-    (Command.group ~summary:"dots - Dotfile management made less toilesome"
+    (Command.group ~summary:"dots-ml - Dotfile management made less toilesome"
        [ ("list", list_command)
        ; ("install", install_command)
        ; ("uninstall", uninstall_command)

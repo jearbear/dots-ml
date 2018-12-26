@@ -1,0 +1,13 @@
+dots-ml - Dotfile management made less toilesome
+
+  dots-ml SUBCOMMAND
+
+=== subcommands ===
+
+  install    link dotfile(s) to target in home directory
+  list       list all dotfiles in the given store
+  manage     move dotfile(s) to the store and link them back to their target
+  uninstall  unlink dotfile(s) from target in home directory
+  unmanage   move dotfile(s) out of the store and back to their target
+  version    print version information
+  help       explain a given subcommand (perhaps recursively)
