@@ -1,1 +1,5 @@
-(executable (name dots) (libraries core))
+(executable
+  (name dots)
+  (public_name dots-ml)
+  (libraries core)
+  (package dots))
