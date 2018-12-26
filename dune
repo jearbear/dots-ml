@@ -2,4 +2,4 @@
   (name dots)
   (public_name dots-ml)
   (libraries core)
-  (package dots))
+  (package dots-ml))
