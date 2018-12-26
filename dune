@@ -2,4 +2,5 @@
   (name dots)
   (public_name dots-ml)
   (libraries core)
+  (preprocess (pps ppx_jane))
   (package dots-ml))
