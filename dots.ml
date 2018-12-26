@@ -121,66 +121,80 @@ let exit_with_res = function
       exit 1
 
 
-let directory =
-  Command.Arg_type.create (fun path ->
-      if Sys.is_directory path = `Yes
-      then Filename.realpath path
-      else Result.failf "Path '%s' must be an existing directory" path |> exit_with_res
-  )
+let store_path_param =
+  let directory =
+    Command.Arg_type.create (fun path ->
+        if Sys.is_directory path = `Yes
+        then Filename.realpath path
+        else Result.failf "Path '%s' must be an existing directory" path |> exit_with_res
+    )
+  and default_home_dir = Filename.concat home_dir ".dotfiles" in
+  Command.Param.(
+    flag "store"
+      (optional_with_default default_home_dir directory)
+      ~doc:"directory dotfile store to use")
 
 
-let file =
-  Command.Arg_type.create (fun path ->
-      if Sys.is_file path = `Yes
-      then Filename.realpath path
-      else Result.failf "Path '%s' must be an existing file" path |> exit_with_res )
-
-
-let regular_file =
-  let is_symlink path =
-    Option.is_some (Option.try_with (fun () -> Unix.readlink path))
+let file_param =
+  let existing_file =
+    Command.Arg_type.create (fun path ->
+        if Sys.is_file path = `Yes
+        then Filename.realpath path
+        else Result.failf "Path '%s' must be an existing file" path |> exit_with_res )
   in
-  Command.Arg_type.create (fun path ->
-      if Sys.is_file path = `Yes && not (is_symlink path)
-      then Filename.realpath path
-      else
-        Result.failf "Path '%s' must be an existing, regular file" path |> exit_with_res
-  )
+  Command.Param.(anon ("file" %: existing_file))
+
+
+let regular_file_param =
+  let existing_regular_file =
+    let is_symlink path =
+      Option.is_some (Option.try_with (fun () -> Unix.readlink path))
+    in
+    Command.Arg_type.create (fun path ->
+        if Sys.is_file path = `Yes && not (is_symlink path)
+        then Filename.realpath path
+        else
+          Result.failf "Path '%s' must be an existing, regular file" path
+          |> exit_with_res )
+  in
+  Command.Param.(anon ("file" %: existing_regular_file))
+
+
+let list_command =
+  Command.basic ~summary:"list all dotfiles in the given store"
+    (Command.Param.map store_path_param ~f:(fun path () -> list_dotfiles path))
+
+
+let install_command =
+  Command.basic ~summary:"link dotfile(s) to target in home directory"
+    Command.Let_syntax.(
+      let%map_open store_path = store_path_param and path = file_param in
+      fun () -> install_dotfile store_path path |> exit_with_res)
+
+
+let uninstall_command =
+  Command.basic ~summary:"unlink dotfile(s) from target in home directory"
+    Command.Let_syntax.(
+      let%map_open store_path = store_path_param and path = file_param in
+      fun () -> uninstall_dotfile store_path path |> exit_with_res)
+
+
+let manage_command =
+  Command.basic
+    ~summary:"move dotfile(s) to the store and link them back to their target"
+    Command.Let_syntax.(
+      let%map_open store_path = store_path_param and path = regular_file_param in
+      fun () -> manage_dotfile store_path path |> exit_with_res)
+
+
+let unmanage_command =
+  Command.basic ~summary:"move dotfile(s) out of the store and back to their target"
+    Command.Let_syntax.(
+      let%map_open store_path = store_path_param and path = file_param in
+      fun () -> unmanage_dotfile store_path path |> exit_with_res)
 
 
 let () =
-  let store_path_param =
-    Command.Param.(
-      flag "store"
-        (optional_with_default (Filename.concat home_dir ".dotfiles") directory)
-        ~doc:"directory dotfile store to use")
-  and file_param = Command.Param.(anon ("file" %: file))
-  and regular_file_param = Command.Param.(anon ("file" %: regular_file)) in
-  let list_command =
-    Command.basic ~summary:"list all dotfiles in the given store"
-      (Command.Param.map store_path_param ~f:(fun path () -> list_dotfiles path))
-  and install_command =
-    Command.basic ~summary:"link dotfile(s) to target in home directory"
-      Command.Let_syntax.(
-        let%map_open store_path = store_path_param and path = file_param in
-        fun () -> install_dotfile store_path path |> exit_with_res)
-  and uninstall_command =
-    Command.basic ~summary:"unlink dotfile(s) from target in home directory"
-      Command.Let_syntax.(
-        let%map_open store_path = store_path_param and path = file_param in
-        fun () -> uninstall_dotfile store_path path |> exit_with_res)
-  and manage_command =
-    Command.basic
-      ~summary:"move dotfile(s) to the store and link them back to their target"
-      Command.Let_syntax.(
-        let%map_open store_path = store_path_param and path = regular_file_param in
-        fun () -> manage_dotfile store_path path |> exit_with_res)
-  and unmanage_command =
-    Command.basic ~summary:"move dotfile(s) out of the store and back to their target"
-      Command.Let_syntax.(
-        let%map_open store_path = store_path_param and path = file_param in
-        fun () -> unmanage_dotfile store_path path |> exit_with_res)
-  in
   Command.run
     (Command.group ~summary:"dots-ml - Dotfile management made less toilesome"
        [ ("list", list_command)
